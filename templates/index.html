@@ -7,9 +7,13 @@
 </head>
 <body>
     <h2>Spam Detector</h2>
-    <form action="/predict" method="post">
+    <form method="post">
         <textarea name="message" rows="4" cols="50" placeholder="Enter your email message..."></textarea><br>
         <button type="submit">Check</button>
     </form>
+
+    {% if result %}
+        <h3>Result: {{ result }}</h3>
+    {% endif %}
 </body>
 </html>

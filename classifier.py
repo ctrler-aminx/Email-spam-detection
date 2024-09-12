@@ -10,50 +10,38 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
+import pickle
 
-# Load dataset
-df = pd.read_csv("spam.csv", encoding='latin-1')
-df = df[['v1', 'v2']]  # Keep only relevant columns
-df.columns = ['label', 'message']  # Rename columns
+df = pd.read_csv("spam.csv", encoding='latin-1')[['v1', 'v2']]
+df.columns = ['lbl', 'msg']
+df['lbl'] = df['lbl'].map({'spam': 1, 'ham': 0})
 
-# Convert labels to binary (spam=1, ham=0)
-df['label'] = df['label'].map({'spam': 1, 'ham': 0})
-
-# Preprocessing function
 nltk.download('stopwords')
-stop_words = set(stopwords.words('english'))
+sw = set(stopwords.words('english'))
 
-def clean_text(text):
-    text = text.lower()
-    text = re.sub(r'\d+', '', text)  # Remove numbers
-    text = text.translate(str.maketrans('', '', string.punctuation))  # Remove punctuation
-    text = " ".join(word for word in text.split() if word not in stop_words)  # Remove stopwords
-    return text
+def clean(txt):
+    txt = txt.lower()
+    txt = re.sub(r'\d+', '', txt)
+    txt = txt.translate(str.maketrans('', '', string.punctuation))
+    return " ".join(w for w in txt.split() if w not in sw)
 
-df['message'] = df['message'].apply(clean_text)
+df['msg'] = df['msg'].apply(clean)
 
-# Convert text to numerical features using TF-IDF
-vectorizer = TfidfVectorizer()
-X = vectorizer.fit_transform(df['message'])
-y = df['label']
+vec = TfidfVectorizer()
+X = vec.fit_transform(df['msg'])
+y = df['lbl']
+X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.3, random_state=42)
 
-# Split into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
-
-# Train and evaluate classifiers
 models = {
-    "Naïve Bayes": MultinomialNB(),
+    "NB": MultinomialNB(),
     "SVM": SVC(kernel='linear'),
-    "Random Forest": RandomForestClassifier()
+    "RF": RandomForestClassifier()
 }
 
-for name, model in models.items():
-    model.fit(X_train, y_train)
-    y_pred = model.predict(X_test)
-    acc = accuracy_score(y_test, y_pred)
-    print(f"{name} Accuracy: {acc:.2f}")
+for n, m in models.items():
+    m.fit(X_tr, y_tr)
+    y_p = m.predict(X_te)
+    print(f"{n} Acc: {accuracy_score(y_te, y_p):.2f}")
 
-# Save the best model (SVM) and vectorizer
-import pickle
 with open('spam_model.pkl', 'wb') as f:
-    pickle.dump((models["SVM"], vectorizer), f)
+    pickle.dump((models["SVM"], vec), f)
